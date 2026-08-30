@@ -25,12 +25,19 @@ export async function callLLM(
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeout);
 
+      const isOpenRouter = config.baseUrl.includes("openrouter.ai");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+      };
+      if (isOpenRouter) {
+        headers["HTTP-Referer"] = window.location.origin;
+        headers["X-Title"] = "TradeFinex";
+      }
+
       const response = await fetch(`${config.baseUrl}/chat/completions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
-        },
+        headers,
         body: JSON.stringify({
           model: config.model,
           messages,

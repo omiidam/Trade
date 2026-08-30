@@ -75,6 +75,55 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {/* Provider Presets */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Quick Setup
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  {
+                    name: "OpenRouter",
+                    baseUrl: "https://openrouter.ai/api/v1",
+                    model: "openai/gpt-4o",
+                  },
+                  {
+                    name: "OpenAI",
+                    baseUrl: "https://api.openai.com/v1",
+                    model: "gpt-4o-mini",
+                  },
+                  {
+                    name: "Anthropic",
+                    baseUrl: "https://api.anthropic.com/v1",
+                    model: "claude-sonnet-4-20250514",
+                  },
+                  {
+                    name: "Local",
+                    baseUrl: "http://localhost:11434/v1",
+                    model: "llama3",
+                  },
+                ].map((preset) => (
+                  <button
+                    key={preset.name}
+                    onClick={() =>
+                      updateLLMConfig({
+                        baseUrl: preset.baseUrl,
+                        model: preset.model,
+                      })
+                    }
+                    className={cn(
+                      "px-3 py-2 rounded-lg text-xs font-medium border transition-all",
+                      settings.llm.baseUrl === preset.baseUrl
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-primary/50 text-muted-foreground"
+                    )}
+                  >
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* API Base URL */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">
