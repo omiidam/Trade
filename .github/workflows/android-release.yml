@@ -41,6 +41,7 @@ jobs:
 
       - name: Generate Release Keystore
         run: |
+          rm -f android/app/tradefinex-release.keystore
           keytool -genkeypair -v \
             -keystore android/app/tradefinex-release.keystore \
             -alias tradefinex \
