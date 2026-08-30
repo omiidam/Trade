@@ -25,7 +25,7 @@ jobs:
         run: npm ci
 
       - name: Build web application
-        run: npm run build
+        run: npx vite build
 
       - name: Setup Java JDK
         uses: actions/setup-java@v4
@@ -36,21 +36,24 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Capacitor CLI and sync
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync Capacitor
         run: npx cap sync android
 
       - name: Generate Release Keystore
         run: |
-          rm -f android/app/tradefinex-release.keystore
+          rm -f android/app/veltrix-release.keystore
           keytool -genkeypair -v \
-            -keystore android/app/tradefinex-release.keystore \
-            -alias tradefinex \
+            -keystore android/app/veltrix-release.keystore \
+            -alias veltrix \
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
-            -storepass tradefinex123 \
-            -keypass tradefinex123 \
-            -dname "CN=TradeFinex, OU=Development, O=Qali, L=Tehran, ST=Tehran, C=IR"
+            -storepass veltrix123 \
+            -keypass veltrix123 \
+            -dname "CN=Veltrix Dashboard, OU=Development, O=Veltrix, L=San Francisco, ST=CA, C=US"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -72,6 +75,6 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tradefinex-release-apk
+          name: veltrix-release-apk
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30

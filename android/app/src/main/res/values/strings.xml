@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">TradeFinex</string>
-    <string name="title_activity_main">TradeFinex</string>
-    <string name="package_name">com.qali.tradefinex</string>
-    <string name="custom_url_scheme">com.qali.tradefinex</string>
+    <string name="app_name">Veltrix Dashboard</string>
+    <string name="title_activity_main">Veltrix Dashboard</string>
+    <string name="package_name">com.example.veltrixdashboard</string>
+    <string name="custom_url_scheme">com.example.veltrixdashboard</string>
 </resources>
