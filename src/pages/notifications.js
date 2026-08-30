@@ -1,6 +1,6 @@
-import { getState } from '../app.js';
-import { notifications as mockNotifs } from '../services/mockData.js';
-import { showToast } from '../services/toast.js';
+import { getState } from '../app';
+import { notifications as mockNotifs } from '../services/mockData';
+import { showToast } from '../services/toast';
 
 let notifs = [...mockNotifs];
 

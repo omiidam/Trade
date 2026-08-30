@@ -1,4 +1,4 @@
-import { getState } from '../app.js';
+import { getState } from '../app';
 import ApexCharts from 'apexcharts';
 
 let charts = [];

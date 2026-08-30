@@ -1,155 +1,88 @@
-import { getState } from '../app.js';
-import { dashboardData, formatCurrency, formatNumber, formatDateShort, orders } from '../services/mockData.js';
-import ApexCharts from 'apexcharts';
-
-let charts = [];
-
-function destroyCharts() {
-  charts.forEach(c => { try { c.destroy(); } catch {} });
-  charts = [];
-}
+import { getState } from '../app';
+import { POPULAR_MARKETS, formatPrice, formatPercent, formatVolume } from '../utils/index';
+import { marketDataService } from '../services/market/marketDataService';
+import { storage } from '../services/storage';
 
 export function dashboardPage(container) {
-  destroyCharts();
   const lang = getState().language;
-  const d = dashboardData;
+  const t = (en, fa) => lang === 'fa' ? fa : en;
   const user = getState().user;
-  const greeting = getGreeting(lang);
 
   container.innerHTML = `
+    <div class="topbar" style="position:sticky;top:0;z-index:100;">
+      <button class="topbar-back" onclick="openSidebar()"><i class="bi bi-list"></i></button>
+      <div class="topbar-title">TradeFinex</div>
+      <button class="topbar-action" onclick="navigate('/settings')"><i class="bi bi-gear"></i></button>
+    </div>
     <div class="page-container">
-      <div class="topbar" style="position:sticky;top:0;margin:-16px -16px 0;padding:12px 16px;">
-        <button class="topbar-back" onclick="openSidebar()"><i class="bi bi-list"></i></button>
-        <div class="topbar-title">Veltrix</div>
-        <button class="topbar-action" onclick="navigate('/notifications')">
-          <i class="bi bi-bell"></i>
-          <span class="topbar-badge"></span>
-        </button>
-        <div class="v-avatar v-avatar-sm" style="background:#556ee6;cursor:pointer;" onclick="navigate('/profile')">
-          <span>${(user?.name || 'A').charAt(0)}</span>
-        </div>
+      <div class="greeting">
+        <h1>${getGreeting(lang)}, ${(user?.name || 'Trader').split(' ')[0]}!</h1>
+        <p>${t('Market overview and quick access','نمای کلی بازار و دسترسی سریع')}</p>
       </div>
 
-      <div class="greeting mt-16">
-        <h1>${greeting}, ${(user?.name || 'Admin').split(' ')[0]}!</h1>
-        <p>${lang === 'fa' ? 'در اینجا خلاصه فعالیت‌ها را مشاهده می‌کنید' : "Here's what's happening with your business today."}</p>
-      </div>
-
-      <!-- KPI Cards -->
-      <div class="grid-2 mb-20">
-        ${kpiCard(d.kpis.revenue, 'bi-currency-dollar', '#556ee6', 'rgba(85,110,230,0.1)')}
-        ${kpiCard(d.kpis.orders, 'bi-cart3', '#34c38f', 'rgba(52,195,143,0.1)')}
-        ${kpiCard(d.kpis.customers, 'bi-people', '#f1b44c', 'rgba(241,180,76,0.1)')}
-        ${kpiCard(d.kpis.conversion, 'bi-graph-up-arrow', '#f46a6a', 'rgba(244,106,106,0.1)')}
-      </div>
-
-      <!-- Revenue Chart -->
-      <div class="v-card mb-20">
-        <div class="v-card-header">
-          <div>
-            <div class="v-card-title">${lang === 'fa' ? 'درآمد' : 'Revenue Overview'}</div>
-            <div class="v-card-subtitle">${lang === 'fa' ? 'مقایسه درآمد، هزینه و سود' : 'Revenue vs Expenses vs Profit'}</div>
-          </div>
-          <div class="d-flex gap-8">
-            ${['7D','30D','3M','1Y'].map((p,i) => `<button class="v-btn v-btn-sm ${i===1?'v-btn-primary':'v-btn-ghost'}" onclick="switchRevenuePeriod('${p}')">${p}</button>`).join('')}
-          </div>
-        </div>
-        <div id="revenueChart" class="chart-container"></div>
-      </div>
-
-      <!-- Sales + Traffic row -->
-      <div class="grid-2 mb-20">
-        <div class="v-card">
-          <div class="v-card-header"><div class="v-card-title">${lang === 'fa' ? 'فروش هفتگی' : 'Weekly Sales'}</div></div>
-          <div id="salesChart" class="chart-container" style="min-height:200px;"></div>
-        </div>
-        <div class="v-card">
-          <div class="v-card-header"><div class="v-card-title">${lang === 'fa' ? 'منابع ترافیک' : 'Traffic Sources'}</div></div>
-          <div id="trafficChart" class="chart-container" style="min-height:200px;"></div>
-        </div>
-      </div>
-
-      <!-- Recent Activity -->
-      <div class="v-card mb-20">
-        <div class="v-card-header">
-          <div class="v-card-title">${lang === 'fa' ? 'فعالیت اخیر' : 'Recent Activity'}</div>
-        </div>
-        ${d.recentActivity.map(a => `
-          <div class="activity-item">
-            <div class="activity-dot" style="background:${a.color}"></div>
-            <div style="flex:1">
-              <div class="activity-text"><strong>${a.user}</strong> ${a.action}</div>
-              <div class="activity-time">${a.time}</div>
+      <!-- Featured Markets -->
+      <div class="mb-20">
+        <div class="v-card-header"><div class="v-card-title">${t('Featured Markets','بازارهای ویژه')}</div></div>
+        <div id="featuredMarkets" class="grid-2 mb-16">
+          ${['BTC/USDT','ETH/USDT','EUR/USD','XAU/USD'].map(sym => `
+            <div class="stat-card" style="cursor:pointer;" onclick="navigateToMarket('${sym}')">
+              <div class="d-flex justify-content-between items-center mb-16">
+                <div>
+                  <div class="stat-card-label" style="font-size:13px;font-weight:600;">${sym}</div>
+                  <div style="font-size:11px;color:var(--v-text-muted);">${POPULAR_MARKETS.find(m=>m.symbol===sym)?.displayName || sym}</div>
+                </div>
+                <div class="v-avatar v-avatar-sm" style="background:${getCategoryColor(POPULAR_MARKETS.find(m=>m.symbol===sym)?.category || 'crypto')}">
+                  <i class="bi ${getCategoryIcon(POPULAR_MARKETS.find(m=>m.symbol===sym)?.category || 'crypto')}" style="font-size:14px;"></i>
+                </div>
+              </div>
+              <div class="stat-card-value" id="price-${sym.replace('/','')}">—</div>
+              <div class="stat-card-change" id="change-${sym.replace('/','')}">${t('Loading...','بارگذاری...')}</div>
             </div>
-          </div>
-        `).join('')}
+          `).join('')}
+        </div>
       </div>
 
-      <!-- Recent Orders -->
+      <!-- Quick Actions -->
+      <div class="v-card mb-20">
+        <div class="v-card-header"><div class="v-card-title">${t('Quick Actions','دسترسی سریع')}</div></div>
+        <div class="d-flex gap-8" style="flex-wrap:wrap;">
+          <button class="v-btn v-btn-primary" onclick="navigate('/markets')"><i class="bi bi-search"></i> ${t('Find Market','جستجوی بازار')}</button>
+          <button class="v-btn v-btn-outline" onclick="navigate('/chart')"><i class="bi bi-bar-chart-line"></i> ${t('Open Chart','نمودار')}</button>
+          <button class="v-btn v-btn-outline" onclick="navigate('/history')"><i class="bi bi-clock-history"></i> ${t('History','تاریخچه')}</button>
+        </div>
+      </div>
+
+      <!-- Recent Markets -->
+      <div class="v-card mb-20" id="recentMarketsCard">
+        <div class="v-card-header"><div class="v-card-title">${t('Recent Markets','بازارهای اخیر')}</div></div>
+        <div id="recentMarkets"></div>
+      </div>
+
+      <!-- Market Categories -->
       <div class="v-card">
-        <div class="v-card-header">
-          <div class="v-card-title">${lang === 'fa' ? 'سفارشات اخیر' : 'Recent Orders'}</div>
-          <button class="v-btn v-btn-sm v-btn-ghost" onclick="navigate('/tables')">${lang === 'fa' ? 'مشاهده همه' : 'View All'}</button>
-        </div>
-        <div class="v-table-card">
-          ${orders.slice(0, 5).map(o => orderCard(o, lang)).join('')}
-        </div>
-      </div>
-    </div>`;
-
-  // Render charts after DOM is ready
-  requestAnimationFrame(() => renderDashboardCharts(d));
-}
-
-function kpiCard(kpi, icon, color, bg) {
-  const isPositive = kpi.change >= 0;
-  const prefix = kpi.prefix || '';
-  const suffix = kpi.suffix || '';
-  const displayValue = typeof kpi.value === 'number' && kpi.value > 999
-    ? formatNumber(Math.round(kpi.value))
-    : (kpi.value % 1 !== 0 ? kpi.value.toFixed(2) : formatNumber(kpi.value));
-
-  return `
-    <div class="stat-card">
-      <div class="stat-card-icon" style="background:${bg};color:${color};">
-        <i class="bi ${icon}"></i>
-      </div>
-      <div class="stat-card-value">${prefix}${displayValue}${suffix}</div>
-      <div class="stat-card-label">${kpi.label}</div>
-      <div class="stat-card-change ${isPositive ? 'up' : 'down'}">
-        <i class="bi bi-arrow-${isPositive ? 'up' : 'down'}"></i>
-        ${Math.abs(kpi.change)}% ${isPositive ? '↑' : '↓'}
-      </div>
-    </div>`;
-}
-
-function orderCard(o, lang) {
-  const statusBadge = {
-    Completed: 'v-badge-success',
-    Pending: 'v-badge-warning',
-    Processing: 'v-badge-info',
-    Cancelled: 'v-badge-danger',
-  }[o.status] || 'v-badge-primary';
-  return `
-    <div class="v-table-row">
-      <div class="v-table-row-header">
-        <div style="flex:1">
-          <div class="fw-600" style="font-size:14px;">${o.id}</div>
-          <div style="font-size:12px;color:var(--v-text-muted);">${o.customer}</div>
-        </div>
-        <div class="fw-700" style="font-size:15px;">${formatCurrency(o.amount)}</div>
-      </div>
-      <div class="v-table-row-body">
-        <div class="v-table-field">
-          <span class="v-table-field-label">${lang === 'fa' ? 'محصول' : 'Product'}</span>
-          <span class="v-table-field-value">${o.product}</span>
-        </div>
-        <div class="v-table-field">
-          <span class="v-table-field-label">${lang === 'fa' ? 'وضعیت' : 'Status'}</span>
-          <span class="v-badge ${statusBadge} v-badge-dot">${o.status}</span>
+        <div class="v-card-header"><div class="v-card-title">${t('Browse Categories','دسته‌بندی‌ها')}</div></div>
+        <div class="grid-2" style="gap:8px;">
+          ${[
+            { cat:'crypto', label:t('Crypto','ارز دیجیتال'), icon:'bi-currency-bitcoin', count:8 },
+            { cat:'forex', label:t('Forex','فارکس'), icon:'bi-currency-exchange', count:4 },
+            { cat:'stocks', label:t('Stocks','سهام'), icon:'bi-graph-up', count:4 },
+            { cat:'indices', label:t('Indices','شاخص‌ها'), icon:'bi-bar-chart-line', count:2 },
+            { cat:'commodities', label:t('Commodities','کالاها'), icon:'bi-gem', count:2 },
+          ].map(c => `
+            <button class="stat-card" style="text-align:left;padding:14px;" onclick="navigate('/markets?cat=${c.cat}')">
+              <div class="d-flex items-center gap-12">
+                <div class="stat-card-icon" style="width:36px;height:36px;font-size:16px;background:${getCategoryColor(c.cat)}20;color:${getCategoryColor(c.cat)};"><i class="bi ${c.icon}"></i></div>
+                <div><div class="fw-600" style="font-size:13px;">${c.label}</div><div style="font-size:11px;color:var(--v-text-muted);">${c.count} ${t('markets','بازار')}</div></div>
+              </div>
+            </button>
+          `).join('')}
         </div>
       </div>
     </div>`;
+
+  // Load prices in background
+  loadFeaturedPrices();
+  renderRecentMarkets();
 }
 
 function getGreeting(lang) {
@@ -158,78 +91,50 @@ function getGreeting(lang) {
   return h < 12 ? 'Good Morning' : h < 18 ? 'Good Afternoon' : 'Good Evening';
 }
 
-window.switchRevenuePeriod = (period) => {
-  // Re-render with filtered data (mock — all periods show same data)
-  const lang = getState().language;
-  const buttons = document.querySelectorAll('.v-card-header .v-btn');
-  buttons.forEach(b => {
-    b.className = b.textContent.trim() === period ? 'v-btn v-btn-sm v-btn-primary' : 'v-btn v-btn-sm v-btn-ghost';
-  });
-};
+function getCategoryColor(cat) {
+  return { crypto:'#f1b44c', forex:'#556ee6', stocks:'#34c38f', indices:'#50a5f1', commodities:'#f46a6a' }[cat] || '#74788d';
+}
 
-function renderDashboardCharts(d) {
-  const isDark = getState().theme === 'dark' || (getState().theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const textColor = isDark ? '#a0aec0' : '#6c757d';
-  const gridColor = isDark ? '#252838' : '#f1f3f6';
+function getCategoryIcon(cat) {
+  return { crypto:'bi-currency-bitcoin', forex:'bi-currency-exchange', stocks:'bi-graph-up', indices:'bi-bar-chart-line', commodities:'bi-gem' }[cat] || 'bi-circle';
+}
 
-  // Revenue chart
-  const revenueEl = document.getElementById('revenueChart');
-  if (revenueEl) {
-    const chart = new ApexCharts(revenueEl, {
-      chart: { type: 'area', height: 280, toolbar: { show: false }, background: 'transparent' },
-      series: [
-        { name: 'Revenue', data: d.revenueChart.revenue },
-        { name: 'Expenses', data: d.revenueChart.expenses },
-        { name: 'Profit', data: d.revenueChart.profit },
-      ],
-      colors: ['#556ee6', '#f46a6a', '#34c38f'],
-      stroke: { width: 2, curve: 'smooth' },
-      fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
-      xaxis: { categories: d.revenueChart.labels, labels: { style: { colors: textColor, fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-      yaxis: { labels: { style: { colors: textColor, fontSize: '11px' }, formatter: (v) => '$' + (v/1000).toFixed(0) + 'k' } },
-      grid: { borderColor: gridColor, strokeDashArray: 4 },
-      legend: { position: 'top', fontSize: '11px', labels: { colors: textColor }, markers: { radius: 12 } },
-      tooltip: { theme: isDark ? 'dark' : 'light' },
-      dataLabels: { enabled: false },
-    });
-    chart.render();
-    charts.push(chart);
-  }
-
-  // Sales chart
-  const salesEl = document.getElementById('salesChart');
-  if (salesEl) {
-    const chart = new ApexCharts(salesEl, {
-      chart: { type: 'bar', height: 200, toolbar: { show: false }, background: 'transparent' },
-      series: [{ name: 'Sales', data: d.salesChart.values }],
-      colors: ['#556ee6'],
-      plotOptions: { bar: { borderRadius: 6, columnWidth: '60%', distributed: true } },
-      xaxis: { categories: d.salesChart.labels, labels: { style: { colors: textColor, fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-      yaxis: { labels: { style: { colors: textColor, fontSize: '11px' } } },
-      grid: { borderColor: gridColor, strokeDashArray: 4 },
-      legend: { show: false },
-      tooltip: { theme: isDark ? 'dark' : 'light' },
-      dataLabels: { enabled: false },
-    });
-    chart.render();
-    charts.push(chart);
-  }
-
-  // Traffic donut
-  const trafficEl = document.getElementById('trafficChart');
-  if (trafficEl) {
-    const chart = new ApexCharts(trafficEl, {
-      chart: { type: 'donut', height: 200, background: 'transparent' },
-      series: d.trafficSources.map(s => s.value),
-      labels: d.trafficSources.map(s => s.label),
-      colors: d.trafficSources.map(s => s.color),
-      plotOptions: { pie: { donut: { size: '65%' }, expandOnClick: false } },
-      legend: { position: 'bottom', fontSize: '11px', labels: { colors: textColor }, markers: { radius: 8 } },
-      tooltip: { theme: isDark ? 'dark' : 'light' },
-      stroke: { width: 0 },
-      dataLabels: { enabled: false },
-    });
-    chart.render();
-    charts.push(chart);
+async function loadFeaturedPrices() {
+  const featured = ['BTC/USDT', 'ETH/USDT', 'EUR/USD', 'XAU/USD'];
+  for (const sym of featured) {
+    const id = sym.replace('/', '');
+    try {
+      const result = await marketDataService.getMarketData(sym, '1h', { minCandles: 5 });
+      const priceEl = document.getElementById(`price-${id}`);
+      const changeEl = document.getElementById(`change-${id}`);
+      if (priceEl) priceEl.textContent = formatPrice(result.quote.currentPrice);
+      if (changeEl) {
+        const pct = result.quote.changePercent24h;
+        changeEl.innerHTML = `<i class="bi bi-arrow-${pct >= 0 ? 'up' : 'down'}"></i> ${formatPercent(pct)}`;
+        changeEl.className = `stat-card-change ${pct >= 0 ? 'up' : 'down'}`;
+      }
+    } catch {
+      const priceEl = document.getElementById(`price-${id}`);
+      if (priceEl) priceEl.textContent = '—';
+    }
   }
 }
+
+function renderRecentMarkets() {
+  const el = document.getElementById('recentMarkets');
+  const card = document.getElementById('recentMarketsCard');
+  if (!el) return;
+  const recent = storage.getJSON('recent', []);
+  if (!recent.length) { if (card) card.style.display = 'none'; return; }
+  el.innerHTML = recent.slice(0, 5).map(s => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--v-border-light);cursor:pointer;" onclick="navigateToMarket('${s}')">
+      <span class="fw-600" style="font-size:14px;">${s}</span>
+      <i class="bi bi-chevron-right" style="color:var(--v-text-muted);"></i>
+    </div>
+  `).join('');
+}
+
+window.navigateToMarket = (sym) => {
+  storage.set('selectedMarket', sym);
+  navigate('/chart');
+};

@@ -1,7 +1,7 @@
-import { getState } from '../app.js';
-import { orders } from '../services/mockData.js';
-import { formatCurrency, formatDateShort } from '../services/mockData.js';
-import { showToast } from '../services/toast.js';
+import { getState } from '../app';
+import { orders } from '../services/mockData';
+import { formatCurrency, formatDateShort } from '../services/mockData';
+import { showToast } from '../services/toast';
 
 let sortField = 'date';
 let sortDir = 'desc';

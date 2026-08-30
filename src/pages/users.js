@@ -1,6 +1,6 @@
-import { getState } from '../app.js';
-import { users as mockUsers } from '../services/mockData.js';
-import { showToast } from '../services/toast.js';
+import { getState } from '../app';
+import { users as mockUsers } from '../services/mockData';
+import { showToast } from '../services/toast';
 
 let userList = [...mockUsers];
 let searchQuery = '';

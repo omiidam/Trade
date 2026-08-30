@@ -1,5 +1,5 @@
-import { getState } from '../app.js';
-import { showToast } from '../services/toast.js';
+import { getState } from '../app';
+import { showToast } from '../services/toast';
 
 export function formsPage(container) {
   const lang = getState().language;

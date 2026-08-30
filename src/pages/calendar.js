@@ -1,6 +1,6 @@
-import { getState } from '../app.js';
-import { calendarEvents } from '../services/mockData.js';
-import { showToast } from '../services/toast.js';
+import { getState } from '../app';
+import { calendarEvents } from '../services/mockData';
+import { showToast } from '../services/toast';
 
 let currentDate = new Date();
 let events = [...calendarEvents];
